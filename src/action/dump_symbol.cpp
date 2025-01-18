@@ -12,6 +12,8 @@ using namespace clang;
 
 namespace {
 
+bool cfg_RecordDeclName = false;
+
 class Container : private std::unordered_set<std::string> {
 public:
     void Put(const std::string& Symbol) { emplace(Symbol); }
@@ -52,7 +54,13 @@ public:
         if (isa<CXXDeductionGuideDecl>(ND)) return true;
 
         std::string MangledName = ASTNameGen.getName(ND);
-        if (!MangledName.empty()) Symbols.Put(MangledName);
+        if (!MangledName.empty()) {
+            if (cfg_RecordDeclName) {
+                MangledName =
+                    std::format("{}, {}", ND->getDeclKindName(), MangledName);
+            }
+            Symbols.Put(MangledName);
+        }
 
         return true;
     }
@@ -92,6 +100,11 @@ bool DumpSymbolFrontendAction::ParseArgs(
     const CompilerInstance&         CI,
     const std::vector<std::string>& args
 ) {
+    for (const auto& arg : args) {
+        if (arg.ends_with("record-decl-name")) {
+            cfg_RecordDeclName = true;
+        }
+    }
     return true;
 }
 
